@@ -18,6 +18,7 @@
 
 import os
 import hashlib
+import unicodedata
 from flask_babel import gettext as _
 
 from . import logger, comic, isoLanguages
@@ -106,6 +107,13 @@ def process(tmp_file_path, original_file_name, original_file_extension, rar_exec
         meta = meta._replace(title=original_file_name)
     if not strip_whitespaces(meta.author) or meta.author.lower() == 'unknown':
         meta = meta._replace(author=_('Unknown'))
+    # Normalize Unicode to NFC so Korean (and other) titles/authors derived from
+    # NFD-decomposed filenames (e.g. macOS/SMB sources) are stored composed and
+    # render correctly in OPDS clients. NFC is idempotent for already-composed text.
+    meta = meta._replace(
+        title=unicodedata.normalize('NFC', meta.title or ''),
+        author=unicodedata.normalize('NFC', meta.author or ''),
+    )
     return meta
 
 
